@@ -1,0 +1,143 @@
+ Lab Guide: Resizing Images with Node.js and AWS Lambda (and S3)
+1. Set Up S3 Buckets
+1.	Log in to the AWS Management Console.
+2.	In the search bar, type S3 and select S3 Service.
+3.	Click Create bucket.
+4.	Enter the bucket name as demo-user-images-bucket.
+5.	Leave all other settings as default and click Create bucket.
+6.	Repeat the process to create another bucket named demo-user-thumbnail-bucket.
+
+2. Upload Images to S3
+1.	Navigate to demo-user-images-bucket.
+2.	Click Upload and then Add files.
+3.	Select a `.jpg` image file and click Upload.
+4.	Verify the uploaded image:
+a.	Click on the image.
+b.	Select the image and click Open.
+
+3. Create an IAM Policy
+1.	Open a new tab in the AWS Console.
+2.	Search for IAM and navigate to the IAM Dashboard.
+3.	In the navigation pane, click Policies, then click Create policy.
+4.	Select the JSON tab and paste the following code:
+{
+"Version": "2012-10-17",
+"Statement": [
+{
+"Effect": "Allow",
+"Action": [
+"logs:PutLogEvents",
+"logs:CreateLogGroup",
+"logs:CreateLogStream"
+],
+"Resource": "arn:aws:logs:*:*:*"
+},
+{
+"Effect": "Allow",
+"Action": ["s3:GetObject"],
+"Resource": "arn:aws:s3:::BUCKET_NAME/*"
+},
+{
+"Effect": "Allow",
+"Action": ["s3:PutObject"],
+"Resource": "arn:aws:s3:::DEST_BUCKET/*"
+}
+]
+}
+    
+5.	Replace `BUCKET_NAME` with demo-user-images-bucket and `DEST_BUCKET` with demo-user-thumbnail-bucket.
+6.	Click Next, then Review policy.
+7.	Name the policy ImageBucketPolicy and click Create policy.
+
+4. Create an IAM Role
+1.	In the IAM Dashboard, click Roles in the navigation pane.
+2.	Click Create role.
+3.	Choose AWS Service as the trusted entity and select Lambda as the use case.
+4.	Attach the ImageBucketPolicy created earlier.
+5.	Click Next and review the configuration.
+6.	Name the role ImageResizerLambdaRole, add a description, and click Create role.
+
+
+
+5. Create an AWS Lambda Function
+1.	In the AWS Console, search for Lambda and navigate to the Lambda Dashboard.
+2.	Click Create function.
+3.	Select Author from scratch.
+4.	Name the function demo-image-resizer-lambda.
+5.	Choose Node.js 18.x as the runtime.
+6.	Select x86_64 as the architecture.
+7. Under Permissions, choose Use an existing role and select ImageResizerLambdaRole.
+8. Click Create function.
+
+6. Upload Code to Lambda
+1.	After the function is created, scroll down to the Code section.
+2.	Click Upload from, then .zip file.
+3.	Upload your Lambda function code as a `.zip` file and click Save.
+
+7. Configure Environment Variables
+1.	Go to the Configuration tab within the Lambda function.
+2.	In the navigation pane, select Environment variables.
+3.	Click Edit and add the following:
+a.	Key: `DEST_BUCKET`
+b.	Value: `demo-user-thumbnail-bucket`
+5.	Click Save.
+
+8. Test the Lambda Function
+1.	Click on the Test tab in the Lambda function dashboard.
+2.	Select the s3-put template.
+3.	Replace the JSON with the following:
+{
+"Records": [
+{
+"eventVersion": "2.0",
+"eventSource": "aws:s3",
+"awsRegion": "us-east-1",
+"eventTime": "1970-01-01T00:00:00.000Z",
+"eventName": "ObjectCreated:Put",
+"userIdentity": {
+"principalId": "EXAMPLE"
+},
+"requestParameters": {
+"sourceIPAddress": "127.0.0.1"
+},
+"responseElements": {
+"x-amz-request-id": "EXAMPLE123456789",
+"x-amz-id-2": "EXAMPLE123/5678abcdefghijklambdaisawesome/mnopqrstuvwxyzABCDEFGH"
+},
+"s3": {
+"s3SchemaVersion": "1.0",
+"configurationId": "testConfigRule",
+"bucket": {
+"name": "demo-user-images-bucket",
+"ownerIdentity": {
+"principalId": "EXAMPLE"
+},
+"arn": "arn:aws:s3:::demo-user-images-bucket"
+},
+"object": {
+"key": "imagename.jpg",
+"size": 1024,
+"eTag": "0123456789abcdef0123456789abcdef",
+"sequencer": "0A1B2C3D4E5F678901"
+}
+}
+}
+]
+}
+    
+4.	Replace `imagename.jpg` with the actual image name.
+5.	Click Test. Ensure the function returns a status code of `200`.
+6.	Check the demo-user-thumbnail-bucket to confirm that the image has been resized.
+
+9. Add a Trigger to Lambda
+1.	In the Lambda function dashboard, click Add trigger.
+2.	Select S3 as the trigger type.
+3.	Choose the demo-user-images-bucket.
+4.	Acknowledge the permissions, then click Add.
+
+10. Test the Trigger
+1.	Go back to the demo-user-images-bucket.
+2.	Upload another `.jpg` image.
+3.	Check the demo-user-thumbnail-bucket to confirm the resized image was automatically generated.
+
+
